@@ -27,7 +27,6 @@ class EnsureWarehouseContext
             // Make current warehouse available globally
             if ($user->currentWarehouse) {
                 app()->instance('current_warehouse', $user->currentWarehouse);
-                config(['app.current_warehouse_id' => $user->current_warehouse_id]);
             }
         }
 

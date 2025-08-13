@@ -29,16 +29,7 @@ class BrandService extends BaseService implements BrandServiceInterface
      */
     public function getFilteredBrands(?Request $request = null, int $perPage = 15): LengthAwarePaginator
     {
-        $user = Auth::user();
-        
-        if (!$user->current_warehouse_id) {
-            throw new \InvalidArgumentException('No warehouse selected');
-        }
-
-        // Apply warehouse scope to repository
-        $this->repository->scopeToWarehouse($user->current_warehouse_id);
-        
-        // The repository will automatically use request parameters for filtering and pagination
+        // Warehouse scoping is handled by global scope/tenancy; just paginate with filters
         return $this->repository->paginateFiltered($perPage);
     }
 
@@ -47,15 +38,8 @@ class BrandService extends BaseService implements BrandServiceInterface
      */
     public function getAllBrandsForCurrentWarehouse(): Collection
     {
-        $user = Auth::user();
-        
-        if (!$user->current_warehouse_id) {
-            throw new \InvalidArgumentException('No warehouse selected');
-        }
-
-        return Brand::forWarehouse($user->current_warehouse_id)
-                   ->orderBy('name')
-                   ->get();
+        // Global scope/tenancy handles scoping automatically
+        return Brand::query()->orderBy('name')->get();
     }
 
     /**
@@ -63,15 +47,8 @@ class BrandService extends BaseService implements BrandServiceInterface
      */
     public function getBrandById(string $id): ?Model
     {
-        $user = Auth::user();
-        
-        if (!$user->current_warehouse_id) {
-            throw new \InvalidArgumentException('No warehouse selected');
-        }
-
         try {
-            $brand = Brand::forWarehouse($user->current_warehouse_id)
-                         ->findOrFail($id);
+            $brand = Brand::query()->findOrFail($id);
             return $brand;
         } catch (ModelNotFoundException) {
             throw new ModelNotFoundException('Brand not found');
@@ -83,12 +60,6 @@ class BrandService extends BaseService implements BrandServiceInterface
      */
     public function createBrand(array $data): Model
     {
-        $user = Auth::user();
-        
-        if (!$user->current_warehouse_id) {
-            throw new \InvalidArgumentException('No warehouse selected');
-        }
-
         // Auto-generate slug if not provided
         if (empty($data['slug'])) {
             $data['slug'] = Str::slug($data['name']);
@@ -97,15 +68,12 @@ class BrandService extends BaseService implements BrandServiceInterface
         // Ensure slug is unique within the warehouse
         $baseSlug = $data['slug'];
         $counter = 1;
-        while (Brand::forWarehouse($user->current_warehouse_id)
-                   ->where('slug', $data['slug'])
-                   ->exists()) {
+        while (Brand::query()->where('slug', $data['slug'])->exists()) {
             $data['slug'] = $baseSlug . '-' . $counter;
             $counter++;
         }
 
-        // Set warehouse and default status
-        $data['warehouse_id'] = $user->current_warehouse_id;
+        // Default status
         $data['is_active'] = $data['is_active'] ?? true;
 
         return Brand::create($data);
@@ -123,15 +91,11 @@ class BrandService extends BaseService implements BrandServiceInterface
             $data['slug'] = Str::slug($data['name']);
         }
 
-        // Ensure slug is unique within the warehouse (excluding current brand)
+        // Ensure slug is unique (excluding current brand)
         if (isset($data['slug'])) {
-            $user = Auth::user();
             $baseSlug = $data['slug'];
             $counter = 1;
-            while (Brand::forWarehouse($user->current_warehouse_id)
-                       ->where('slug', $data['slug'])
-                       ->where('id', '!=', $brand->id)
-                       ->exists()) {
+            while (Brand::query()->where('slug', $data['slug'])->where('id', '!=', $brand->id)->exists()) {
                 $data['slug'] = $baseSlug . '-' . $counter;
                 $counter++;
             }
@@ -171,16 +135,7 @@ class BrandService extends BaseService implements BrandServiceInterface
      */
     public function getBrandsByStatus(bool $isActive): Collection
     {
-        $user = Auth::user();
-        
-        if (!$user->current_warehouse_id) {
-            throw new \InvalidArgumentException('No warehouse selected');
-        }
-
-        return Brand::forWarehouse($user->current_warehouse_id)
-                   ->where('is_active', $isActive)
-                   ->orderBy('name')
-                   ->get();
+        return Brand::query()->where('is_active', $isActive)->orderBy('name')->get();
     }
 
     /**
@@ -188,13 +143,7 @@ class BrandService extends BaseService implements BrandServiceInterface
      */
     public function searchBrands(string $query): Collection
     {
-        $user = Auth::user();
-        
-        if (!$user->current_warehouse_id) {
-            throw new \InvalidArgumentException('No warehouse selected');
-        }
-
-        return Brand::forWarehouse($user->current_warehouse_id)
+        return Brand::query()
                    ->where(function ($queryBuilder) use ($query) {
                        $queryBuilder->where('name', 'like', "%{$query}%")
                                    ->orWhere('description', 'like', "%{$query}%")
