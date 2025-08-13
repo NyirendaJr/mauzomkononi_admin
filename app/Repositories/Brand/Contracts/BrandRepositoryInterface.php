@@ -7,10 +7,7 @@ use Illuminate\Database\Eloquent\Collection;
 
 interface BrandRepositoryInterface extends QueryableRepositoryInterface
 {
-    /**
-     * Scope repository queries to a specific warehouse
-     */
-    public function scopeToWarehouse(string $warehouseId): void;
+    // Warehouse scoping handled globally via multitenancy; removed from repository contract
 
     /**
      * Get brands by status for current warehouse

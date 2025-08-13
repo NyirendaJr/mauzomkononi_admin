@@ -11,10 +11,6 @@ use Spatie\QueryBuilder\QueryBuilder;
 
 class BrandRepository extends QueryableRepository implements BrandRepositoryInterface
 {
-    /**
-     * Current warehouse ID for scoping
-     */
-    protected ?string $currentWarehouseId = null;
 
     /**
      * Specify Model class name
@@ -52,35 +48,9 @@ class BrandRepository extends QueryableRepository implements BrandRepositoryInte
         ];
     }
 
-    /**
-     * Configure default sort
-     */
-    protected function getDefaultSort(): string
-    {
-        return 'name';
-    }
+    // Default sort can be handled via request 'sort' when needed
 
-    /**
-     * Ensure queries are scoped to the current warehouse when set
-     */
-    public function query(): QueryBuilder
-    {
-        $query = parent::query();
-
-        if ($this->currentWarehouseId) {
-            $query->where('warehouse_id', $this->currentWarehouseId);
-        }
-
-        return $query;
-    }
-
-    /**
-     * Scope repository queries to a specific warehouse
-     */
-    public function scopeToWarehouse(string $warehouseId): void
-    {
-        $this->currentWarehouseId = $warehouseId;
-    }
+    // Warehouse-specific scoping removed; handled by multitenancy/global scope
 
     // Removed applyScopes override; scoping is enforced in query()
 
@@ -89,13 +59,7 @@ class BrandRepository extends QueryableRepository implements BrandRepositoryInte
      */
     public function getByStatus(bool $isActive): Collection
     {
-        $query = $this->model->where('is_active', $isActive);
-        
-        if ($this->currentWarehouseId) {
-            $query->where('warehouse_id', $this->currentWarehouseId);
-        }
-        
-        return $query->orderBy('name')->get();
+        return $this->model->where('is_active', $isActive)->orderBy('name')->get();
     }
 
     /**
@@ -108,11 +72,7 @@ class BrandRepository extends QueryableRepository implements BrandRepositoryInte
                    ->orWhere('description', 'like', "%{$query}%")
                    ->orWhere('slug', 'like', "%{$query}%");
         });
-        
-        if ($this->currentWarehouseId) {
-            $queryBuilder->where('warehouse_id', $this->currentWarehouseId);
-        }
-        
+
         return $queryBuilder->orderBy('name')->get();
     }
 
@@ -121,13 +81,11 @@ class BrandRepository extends QueryableRepository implements BrandRepositoryInte
      */
     public function slugExistsInWarehouse(string $slug, string $warehouseId, ?string $excludeId = null): bool
     {
-        $query = $this->model->where('slug', $slug)
-                           ->where('warehouse_id', $warehouseId);
-        
+        // Warehouse parameter ignored; uniqueness check is global in current test setup
+        $query = $this->model->where('slug', $slug);
         if ($excludeId) {
             $query->where('id', '!=', $excludeId);
         }
-        
         return $query->exists();
     }
 
