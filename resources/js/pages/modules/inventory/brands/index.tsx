@@ -37,7 +37,7 @@ export default function BrandsModule({ module, flash }: BrandsModuleProps) {
             <BrandsProvider initialFlash={flash}>
                 <PageLayout
                     title="Brand Management"
-                    description="Manage your product brands and brand information."
+                    description="Manage your product brands."
                     primaryButtons={<BrandsPrimaryButtons />}
                     dialogs={<BrandsDialogs />}
                     module={module}

@@ -4,10 +4,9 @@ import apiClient from './axiosConfig';
 export interface Brand {
     id: string;
     name: string;
-    slug: string;
     description?: string;
-    logo_url?: string;
-    website_url?: string;
+    image?: string;
+    image_url?: string;
     is_active: boolean;
     warehouse_id: string;
     warehouse: {
@@ -49,10 +48,7 @@ export interface BrandsResponse {
 
 export interface CreateBrandData {
     name: string;
-    slug?: string;
     description?: string;
-    logo_url?: string;
-    website_url?: string;
     is_active?: boolean;
 }
 
@@ -86,8 +82,6 @@ class BrandsApiService implements GenericApiService<Brand, BrandFilters> {
             const response = await apiClient.get(`${this.baseUrl}?${params.toString()}`);
             return response.data;
         } catch (error) {
-            console.error('API Error:', error);
-            // Return empty response with default pagination on error
             return {
                 data: [],
                 meta: {
@@ -120,13 +114,17 @@ class BrandsApiService implements GenericApiService<Brand, BrandFilters> {
         return response.data.data;
     }
 
-    async createBrand(data: CreateBrandData): Promise<Brand> {
-        const response = await apiClient.post(this.baseUrl, data);
+    async createBrand(data: CreateBrandData | FormData): Promise<Brand> {
+        const response = await apiClient.post(this.baseUrl, data, {
+            headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+        });
         return response.data.data;
     }
 
-    async updateBrand(id: string, data: UpdateBrandData): Promise<Brand> {
-        const response = await apiClient.put(`${this.baseUrl}/${id}`, data);
+    async updateBrand(id: string, data: UpdateBrandData | FormData): Promise<Brand> {
+        const response = await apiClient.post(`${this.baseUrl}/${id}?_method=PUT`, data, {
+            headers: data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : undefined,
+        });
         return response.data.data;
     }
 

@@ -20,7 +20,24 @@ createInertiaApp({
         root.render(
             <FontProvider>
                 <App {...props} />
-                <Toaster />
+                <Toaster
+                    theme="light"
+                    closeButton
+                    toastOptions={{
+                        classNames: {
+                            toast: 'bg-background text-foreground border border-border',
+                            success: 'bg-background text-foreground',
+                            error: 'bg-background text-foreground',
+                            warning: 'bg-background text-foreground',
+                            info: 'bg-background text-foreground',
+                            title: 'text-foreground font-medium',
+                            description: 'text-muted-foreground',
+                            actionButton: 'bg-primary text-primary-foreground hover:opacity-90',
+                            cancelButton: 'bg-muted text-foreground',
+                            closeButton: 'text-muted-foreground',
+                        },
+                    }}
+                />
             </FontProvider>,
         );
     },

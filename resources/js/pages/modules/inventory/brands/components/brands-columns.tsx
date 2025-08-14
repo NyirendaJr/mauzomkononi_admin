@@ -1,6 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 import { ArrowUpDown, Edit, MoreHorizontal, ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -43,13 +44,18 @@ export const columns: ColumnDef<Brand>[] = [
         },
         cell: ({ row }) => {
             const brand = row.original;
+            const imageUrl = (brand as any).image_url || (brand as any).image || '';
+            const initial = (brand.name || '?').trim().charAt(0).toUpperCase();
             return (
                 <div className="flex items-center space-x-3">
-                    {brand.logo_url && <img src={brand.logo_url} alt={brand.name} className="h-8 w-8 rounded object-cover" />}
-                    <div>
-                        <div className="font-medium">{brand.name}</div>
-                        <div className="text-sm text-muted-foreground">{brand.slug}</div>
-                    </div>
+                    <Avatar className="h-8 w-8">
+                        {imageUrl ? (
+                            <AvatarImage src={imageUrl} alt={brand.name} />
+                        ) : (
+                            <AvatarFallback className="text-xs font-semibold">{initial}</AvatarFallback>
+                        )}
+                    </Avatar>
+                    <div className="font-medium">{brand.name}</div>
                 </div>
             );
         },
@@ -172,4 +178,3 @@ function BrandActionsCell({ brand }: { brand: Brand }) {
         </DropdownMenu>
     );
 }
-

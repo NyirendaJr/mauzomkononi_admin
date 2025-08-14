@@ -1,7 +1,6 @@
-import { zodResolver } from '@hookform/resolvers/zod';
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import { toast } from 'sonner';
 
 import {
     AlertDialog,
@@ -14,24 +13,21 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { brandsApiService, CreateBrandData, UpdateBrandData } from '@/services/brandsApiService';
+import { brandsApiService } from '@/services/brandsApiService';
+import { handleServerError } from '@/utils/handle-server-error';
 import { useBrands } from '../context/brands-context';
 
-const brandFormSchema = z.object({
-    name: z.string().min(1, 'Brand name is required').max(255, 'Brand name is too long'),
-    slug: z.string().max(255, 'Slug is too long').optional(),
-    description: z.string().max(1000, 'Description is too long').optional(),
-    logo_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-    website_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-    is_active: z.boolean().default(true),
-});
-
-type BrandFormData = z.infer<typeof brandFormSchema>;
+interface BrandFormData {
+    name: string;
+    description?: string;
+    is_active: boolean;
+    image?: FileList;
+}
 
 export function BrandsDialogs() {
     return (
@@ -47,13 +43,9 @@ function CreateBrandDialog() {
     const { isCreateDialogOpen, setIsCreateDialogOpen, setSuccessMessage, setErrorMessage, isLoading, setIsLoading } = useBrands();
 
     const form = useForm<BrandFormData>({
-        resolver: zodResolver(brandFormSchema),
         defaultValues: {
             name: '',
-            slug: '',
             description: '',
-            logo_url: '',
-            website_url: '',
             is_active: true,
         },
     });
@@ -61,152 +53,106 @@ function CreateBrandDialog() {
     const onSubmit = async (data: BrandFormData) => {
         setIsLoading(true);
         try {
-            // Clean up empty strings to undefined
-            const cleanData: CreateBrandData = {
-                ...data,
-                slug: data.slug || undefined,
-                description: data.description || undefined,
-                logo_url: data.logo_url || undefined,
-                website_url: data.website_url || undefined,
-            };
+            const formData = new FormData();
+            formData.append('name', data.name);
+            if (data.description !== undefined) formData.append('description', data.description);
+            formData.append('is_active', String(data.is_active ? 1 : 0));
+            if (data.image && data.image[0]) {
+                formData.append('image', data.image[0]);
+            }
 
-            await brandsApiService.createBrand(cleanData);
-            setSuccessMessage('Brand created successfully');
+            await brandsApiService.createBrand(formData as any);
+            toast.success('Brand created successfully');
             setIsCreateDialogOpen(false);
             form.reset();
             // Trigger refetch - this would be handled by the parent component
             window.location.reload();
         } catch (error: any) {
-            setErrorMessage(error.response?.data?.error || 'Failed to create brand');
+            const errors = handleServerError(error) as Record<string, string[]> | undefined;
+            if (errors) {
+                console.log(errors);
+                // Map server-side field errors to form state
+                Object.entries(errors).forEach(([field, messages]) => {
+                    form.setError(field as keyof BrandFormData, { type: 'server', message: messages[0] });
+                });
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
-    const generateSlug = (name: string) => {
-        return name
-            .toLowerCase()
-            .replace(/[^a-z0-9 -]/g, '')
-            .replace(/\s+/g, '-')
-            .replace(/-+/g, '-')
-            .trim();
-    };
-
-    const handleNameChange = (name: string) => {
-        form.setValue('name', name);
-        if (!form.getValues('slug')) {
-            form.setValue('slug', generateSlug(name));
-        }
-    };
-
     return (
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Create New Brand</DialogTitle>
-                    <DialogDescription>Add a new brand to your inventory management system.</DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Brand Name</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Enter brand name" {...field} onChange={(e) => handleNameChange(e.target.value)} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+        <Sheet open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <SheetContent
+                side="right"
+                className="w-full sm:max-w-lg md:max-w-xl"
+                onEscapeKeyDown={(e) => e.preventDefault()}
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+                <SheetHeader>
+                    <SheetTitle>Create New Brand</SheetTitle>
+                </SheetHeader>
+                <div className="px-6 pb-6">
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Brand Name</FormLabel>
+                                        <FormControl>
+                                            <Input {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-                        <FormField
-                            control={form.control}
-                            name="slug"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Slug</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="brand-slug" {...field} />
-                                    </FormControl>
-                                    <FormDescription>URL-friendly version. Leave empty to auto-generate.</FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Description</FormLabel>
+                                        <FormControl>
+                                            <Textarea {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-                        <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Description</FormLabel>
-                                    <FormControl>
-                                        <Textarea placeholder="Brief description of the brand" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                            <FormField
+                                control={form.control}
+                                name="is_active"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                        <div className="space-y-0.5">
+                                            <FormLabel>Active</FormLabel>
+                                            <FormDescription>Active brands can be assigned to products.</FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
 
-                        <FormField
-                            control={form.control}
-                            name="logo_url"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Logo URL</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="https://example.com/logo.png" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="website_url"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Website URL</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="https://brand-website.com" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="is_active"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                                    <div className="space-y-0.5">
-                                        <FormLabel>Active</FormLabel>
-                                        <FormDescription>Active brands can be assigned to products.</FormDescription>
-                                    </div>
-                                    <FormControl>
-                                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
-
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button type="submit" disabled={isLoading}>
-                                {isLoading ? 'Creating...' : 'Create Brand'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
+                            <div className="mt-4 flex justify-end gap-2">
+                                <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={isLoading}>
+                                    {isLoading ? 'Creating...' : 'Create Brand'}
+                                </Button>
+                            </div>
+                        </form>
+                    </Form>
+                </div>
+            </SheetContent>
+        </Sheet>
     );
 }
 
@@ -215,13 +161,9 @@ function EditBrandDialog() {
         useBrands();
 
     const form = useForm<BrandFormData>({
-        resolver: zodResolver(brandFormSchema),
         defaultValues: {
             name: '',
-            slug: '',
             description: '',
-            logo_url: '',
-            website_url: '',
             is_active: true,
         },
     });
@@ -231,10 +173,7 @@ function EditBrandDialog() {
         if (editingBrand) {
             form.reset({
                 name: editingBrand.name,
-                slug: editingBrand.slug,
                 description: editingBrand.description || '',
-                logo_url: editingBrand.logo_url || '',
-                website_url: editingBrand.website_url || '',
                 is_active: editingBrand.is_active,
             });
         }
@@ -245,142 +184,139 @@ function EditBrandDialog() {
 
         setIsLoading(true);
         try {
-            // Clean up empty strings to undefined
-            const cleanData: UpdateBrandData = {
-                ...data,
-                slug: data.slug || undefined,
-                description: data.description || undefined,
-                logo_url: data.logo_url || undefined,
-                website_url: data.website_url || undefined,
-            };
+            const formData = new FormData();
+            formData.append('name', data.name);
+            if (data.description !== undefined) formData.append('description', data.description);
+            formData.append('is_active', String(data.is_active ? 1 : 0));
+            if (data.image && data.image[0]) {
+                formData.append('image', data.image[0]);
+            }
 
-            await brandsApiService.updateBrand(editingBrand.id, cleanData);
-            setSuccessMessage('Brand updated successfully');
+            await brandsApiService.updateBrand(editingBrand.id, formData as any);
+            toast.success('Brand updated successfully');
             setIsEditDialogOpen(false);
             setEditingBrand(null);
             // Trigger refetch - this would be handled by the parent component
             window.location.reload();
         } catch (error: any) {
-            setErrorMessage(error.response?.data?.error || 'Failed to update brand');
+            const errors = handleServerError(error) as Record<string, string[]> | undefined;
+            if (errors) {
+                Object.entries(errors).forEach(([field, messages]) => {
+                    form.setError(field as keyof BrandFormData, { type: 'server', message: messages[0] });
+                });
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <Dialog
+        <Sheet
             open={isEditDialogOpen}
             onOpenChange={(open) => {
                 setIsEditDialogOpen(open);
                 if (!open) setEditingBrand(null);
             }}
         >
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>Edit Brand</DialogTitle>
-                    <DialogDescription>Update the brand information.</DialogDescription>
-                </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        {/* Same form fields as CreateBrandDialog */}
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Brand Name</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Enter brand name" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+            <SheetContent
+                side="right"
+                className="w-full sm:max-w-lg md:max-w-xl"
+                onEscapeKeyDown={(e) => e.preventDefault()}
+                onPointerDownOutside={(e) => e.preventDefault()}
+                onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+                <SheetHeader>
+                    <SheetTitle>Edit Brand</SheetTitle>
+                </SheetHeader>
+                <div className="px-6 pb-6">
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            {/* Same form fields as CreateBrandDialog */}
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Brand Name</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Enter brand name" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-                        <FormField
-                            control={form.control}
-                            name="slug"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Slug</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="brand-slug" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                            <FormField
+                                control={form.control}
+                                name="image"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Image</FormLabel>
+                                        <FormControl>
+                                            <Input type="file" accept="image/*" onChange={(e) => field.onChange(e.target.files)} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-                        <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Description</FormLabel>
-                                    <FormControl>
-                                        <Textarea placeholder="Brief description of the brand" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Description</FormLabel>
+                                        <FormControl>
+                                            <Textarea placeholder="Brief description of the brand" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-                        <FormField
-                            control={form.control}
-                            name="logo_url"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Logo URL</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="https://example.com/logo.png" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                            <FormField
+                                control={form.control}
+                                name="image"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Image</FormLabel>
+                                        <FormControl>
+                                            <Input type="file" accept="image/*" onChange={(e) => field.onChange(e.target.files)} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-                        <FormField
-                            control={form.control}
-                            name="website_url"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Website URL</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="https://brand-website.com" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                            <FormField
+                                control={form.control}
+                                name="is_active"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                                        <div className="space-y-0.5">
+                                            <FormLabel>Active</FormLabel>
+                                            <FormDescription>Active brands can be assigned to products.</FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
 
-                        <FormField
-                            control={form.control}
-                            name="is_active"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                                    <div className="space-y-0.5">
-                                        <FormLabel>Active</FormLabel>
-                                        <FormDescription>Active brands can be assigned to products.</FormDescription>
-                                    </div>
-                                    <FormControl>
-                                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
-
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button type="submit" disabled={isLoading}>
-                                {isLoading ? 'Updating...' : 'Update Brand'}
-                            </Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
-            </DialogContent>
-        </Dialog>
+                            <div className="mt-4 flex justify-end gap-2">
+                                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                                    Cancel
+                                </Button>
+                                <Button type="submit" disabled={isLoading}>
+                                    {isLoading ? 'Updating...' : 'Update Brand'}
+                                </Button>
+                            </div>
+                        </form>
+                    </Form>
+                </div>
+            </SheetContent>
+        </Sheet>
     );
 }
 

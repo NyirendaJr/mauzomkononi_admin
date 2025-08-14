@@ -6,6 +6,7 @@ use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Model;
 
 /**
  * Trait BelongsToWarehouse
@@ -30,6 +31,21 @@ trait BelongsToWarehouse
                 $builder->where($table . '.warehouse_id', $warehouseId);
             }
         });
+
+        // Automatically set warehouse_id on create/save if not provided
+        $ensureWarehouse = function (Model $model): void {
+            if (!$model->getAttribute('warehouse_id')) {
+                $warehouse = app()->bound('current_warehouse') ? app('current_warehouse') : null;
+                $user = Auth::user();
+                $currentWarehouseId = $warehouse?->id ?? ($user?->current_warehouse_id ?? null);
+                if ($currentWarehouseId) {
+                    $model->setAttribute('warehouse_id', $currentWarehouseId);
+                }
+            }
+        };
+
+        static::creating($ensureWarehouse);
+        static::saving($ensureWarehouse);
     }
 
     /**

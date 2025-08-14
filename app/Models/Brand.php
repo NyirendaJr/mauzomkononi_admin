@@ -20,11 +20,8 @@ class Brand extends Model
 
     protected $fillable = [
         'name',
-        'slug',
         'description',
         'image',
-        'logo_url',
-        'website_url',
         'is_active',
         'warehouse_id'
     ];
@@ -34,8 +31,7 @@ class Brand extends Model
      */
     public array $searchable = [
         'name',
-        'description',
-        'slug'
+        'description'
     ];
 
     protected $casts = [

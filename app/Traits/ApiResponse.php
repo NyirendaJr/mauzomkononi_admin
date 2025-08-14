@@ -83,8 +83,11 @@ trait ApiResponse
     /**
      * Return a 422 Validation Error response.
      */
-    public function validationErrorResponse($message = 'Validation failed'): JsonResponse
+    public function validationErrorResponse($message = 'Validation failed', array $errors = []): JsonResponse
     {
-        return $this->errorResponse($message, Response::HTTP_UNPROCESSABLE_ENTITY);
+        return response()->json([
+            'message' => $message,
+            'errors' => $errors,
+        ], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
 }

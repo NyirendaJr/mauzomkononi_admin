@@ -60,21 +60,12 @@ class BrandService extends BaseService implements BrandServiceInterface
      */
     public function createBrand(array $data): Model
     {
-        // Auto-generate slug if not provided
-        if (empty($data['slug'])) {
-            $data['slug'] = Str::slug($data['name']);
-        }
-
-        // Ensure slug is unique within the warehouse
-        $baseSlug = $data['slug'];
-        $counter = 1;
-        while (Brand::query()->where('slug', $data['slug'])->exists()) {
-            $data['slug'] = $baseSlug . '-' . $counter;
-            $counter++;
-        }
-
-        // Default status
         $data['is_active'] = $data['is_active'] ?? true;
+
+        if (isset($data['image']) && $data['image'] instanceof \Illuminate\Http\UploadedFile) {
+            $path = $data['image']->store('brands', 'public');
+            $data['image'] = $path;
+        }
 
         return Brand::create($data);
     }
@@ -86,19 +77,9 @@ class BrandService extends BaseService implements BrandServiceInterface
     {
         $brand = $this->getBrandById($id);
 
-        // Auto-generate slug if not provided but name is being updated
-        if (empty($data['slug']) && isset($data['name'])) {
-            $data['slug'] = Str::slug($data['name']);
-        }
-
-        // Ensure slug is unique (excluding current brand)
-        if (isset($data['slug'])) {
-            $baseSlug = $data['slug'];
-            $counter = 1;
-            while (Brand::query()->where('slug', $data['slug'])->where('id', '!=', $brand->id)->exists()) {
-                $data['slug'] = $baseSlug . '-' . $counter;
-                $counter++;
-            }
+        if (isset($data['image']) && $data['image'] instanceof \Illuminate\Http\UploadedFile) {
+            $path = $data['image']->store('brands', 'public');
+            $data['image'] = $path;
         }
 
         $brand->update($data);
