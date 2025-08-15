@@ -161,6 +161,7 @@ export function ApiDataTable<TData, TValue, TFilters extends BaseFilters = BaseF
 
                 // Ensure we have valid data and pagination
                 const validData = Array.isArray(response.data) ? response.data : [];
+                console.log(validData);
                 const validPagination =
                     response.meta && typeof response.meta === 'object'
                         ? response.meta
@@ -337,36 +338,40 @@ export function ApiDataTable<TData, TValue, TFilters extends BaseFilters = BaseF
         ));
     };
 
-    const renderError = () => {
+    const renderErrorRow = () => {
         if (!error) return null;
 
         const isRetrying = retryCountRef.current > 0 && retryCountRef.current < maxRetries;
 
         return (
-            <Alert variant="destructive" className="mb-4">
-                <AlertDescription className="flex items-center justify-between">
-                    <div className="flex flex-col gap-2">
-                        <span>{error}</span>
-                        {isRetrying && (
-                            <span className="text-sm text-muted-foreground">
-                                Retrying in {Math.pow(2, retryCountRef.current)} seconds... (Attempt {retryCountRef.current}/{maxRetries})
-                            </span>
-                        )}
-                    </div>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                            retryCountRef.current = 0;
-                            fetchData(filters);
-                        }}
-                        disabled={loading || isRetrying}
-                    >
-                        <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                        {isRetrying ? 'Retrying...' : 'Retry'}
-                    </Button>
-                </AlertDescription>
-            </Alert>
+            <TableRow>
+                <TableCell colSpan={columns.length} className="h-24">
+                    <Alert variant="destructive">
+                        <AlertDescription className="flex items-center justify-between">
+                            <div className="flex flex-col gap-2">
+                                <span>{error}</span>
+                                {isRetrying && (
+                                    <span className="text-sm text-muted-foreground">
+                                        Retrying in {Math.pow(2, retryCountRef.current)} seconds... (Attempt {retryCountRef.current}/{maxRetries})
+                                    </span>
+                                )}
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    retryCountRef.current = 0;
+                                    fetchData(filters);
+                                }}
+                                disabled={loading || isRetrying}
+                            >
+                                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                                {isRetrying ? 'Retrying...' : 'Retry'}
+                            </Button>
+                        </AlertDescription>
+                    </Alert>
+                </TableCell>
+            </TableRow>
         );
     };
 
@@ -392,7 +397,7 @@ export function ApiDataTable<TData, TValue, TFilters extends BaseFilters = BaseF
                         {loading ? (
                             renderLoadingRows()
                         ) : error ? (
-                            renderError()
+                            renderErrorRow()
                         ) : table.getRowModel().rows?.length ? (
                             table.getRowModel().rows.map((row) => (
                                 <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'} className="group/row">

@@ -40,7 +40,7 @@ export function ApiDataTableWithPagination<TData, TValue, TFilters extends BaseF
     const [currentFilters, setCurrentFilters] = useState<TFilters>({
         ...(initialFilters ?? ({} as TFilters)),
         page: 1,
-        per_page: 10,
+        per_page: 5,
     } as TFilters & { page: number; per_page: number });
 
     const handlePageChange = useCallback((page: number) => {

@@ -16,35 +16,22 @@ use Illuminate\Support\Str;
 
 class BrandService extends BaseService implements BrandServiceInterface
 {
-    /**
-     * BrandService constructor.
-     */
+
     public function __construct(protected BrandRepositoryInterface $brandRepository)
     {
         $this->setRepository($brandRepository);
     }
 
-    /**
-     * Get filtered brands with pagination for current warehouse
-     */
     public function getFilteredBrands(?Request $request = null, int $perPage = 15): LengthAwarePaginator
     {
-        // Warehouse scoping is handled by global scope/tenancy; just paginate with filters
         return $this->repository->paginateFiltered($perPage);
     }
 
-    /**
-     * Get all brands for current warehouse (without pagination)
-     */
     public function getAllBrandsForCurrentWarehouse(): Collection
     {
-        // Global scope/tenancy handles scoping automatically
         return Brand::query()->orderBy('name')->get();
     }
 
-    /**
-     * Get brand by ID (warehouse scoped)
-     */
     public function getBrandById(string $id): ?Model
     {
         try {
@@ -55,9 +42,6 @@ class BrandService extends BaseService implements BrandServiceInterface
         }
     }
 
-    /**
-     * Create brand for current warehouse
-     */
     public function createBrand(array $data): Model
     {
         $data['is_active'] = $data['is_active'] ?? true;
@@ -70,9 +54,6 @@ class BrandService extends BaseService implements BrandServiceInterface
         return Brand::create($data);
     }
 
-    /**
-     * Update brand (warehouse scoped)
-     */
     public function updateBrand(string $id, array $data): Model
     {
         $brand = $this->getBrandById($id);
@@ -86,9 +67,6 @@ class BrandService extends BaseService implements BrandServiceInterface
         return $brand->fresh();
     }
 
-    /**
-     * Delete brand (warehouse scoped)
-     */
     public function deleteBrand(string $id): bool
     {
         $brand = $this->getBrandById($id);
@@ -101,36 +79,10 @@ class BrandService extends BaseService implements BrandServiceInterface
         return $brand->delete();
     }
 
-    /**
-     * Toggle brand status (warehouse scoped)
-     */
     public function toggleBrandStatus(string $id): Model
     {
         $brand = $this->getBrandById($id);
         $brand->update(['is_active' => !$brand->is_active]);
         return $brand->fresh();
-    }
-
-    /**
-     * Get brands by status for current warehouse
-     */
-    public function getBrandsByStatus(bool $isActive): Collection
-    {
-        return Brand::query()->where('is_active', $isActive)->orderBy('name')->get();
-    }
-
-    /**
-     * Search brands by name for current warehouse
-     */
-    public function searchBrands(string $query): Collection
-    {
-        return Brand::query()
-                   ->where(function ($queryBuilder) use ($query) {
-                       $queryBuilder->where('name', 'like', "%{$query}%")
-                                   ->orWhere('description', 'like', "%{$query}%")
-                                   ->orWhere('slug', 'like', "%{$query}%");
-                   })
-                   ->orderBy('name')
-                   ->get();
     }
 }

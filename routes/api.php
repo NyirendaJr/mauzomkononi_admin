@@ -73,4 +73,14 @@ Route::middleware(['auth:sanctum', EnsureWarehouseContext::class])->group(functi
         Route::post('/{brand}/toggle-status', [App\Http\Controllers\Api\Internal\BrandController::class, 'toggleStatus'])->name('toggle-status');
         Route::get('/by-status/{status}', [App\Http\Controllers\Api\Internal\BrandController::class, 'getByStatus'])->name('by-status');
     });
+
+    // Category management (Inventory Module)
+    Route::prefix('categories')->name('categories.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\Internal\CategoryController::class, 'index'])->name('index');
+        Route::get('/all', [App\Http\Controllers\Api\Internal\CategoryController::class, 'all'])->name('all');
+        Route::get('/{category}', [App\Http\Controllers\Api\Internal\CategoryController::class, 'show'])->name('show');
+        Route::post('/', [App\Http\Controllers\Api\Internal\CategoryController::class, 'store'])->name('store');
+        Route::put('/{category}', [App\Http\Controllers\Api\Internal\CategoryController::class, 'update'])->name('update');
+        Route::delete('/{category}', [App\Http\Controllers\Api\Internal\CategoryController::class, 'destroy'])->name('destroy');
+    });
 });

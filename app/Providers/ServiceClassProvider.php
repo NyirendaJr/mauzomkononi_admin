@@ -18,6 +18,8 @@ use App\Services\Contracts\RoleServiceInterface;
 use App\Services\Contracts\PermissionHelperServiceInterface;
 use App\Services\Contracts\StoreServiceInterface;
 use App\Services\Contracts\WarehouseServiceInterface;
+use App\Services\Contracts\CategoryServiceInterface;
+use App\Services\Concretes\CategoryService;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 
 class ServiceClassProvider extends BaseServiceProvider
@@ -38,6 +40,7 @@ class ServiceClassProvider extends BaseServiceProvider
         $this->app->bind(StoreServiceInterface::class, StoreService::class);
         $this->app->bind(WarehouseServiceInterface::class, WarehouseService::class);
         $this->app->bind(BrandServiceInterface::class, BrandService::class);
+        $this->app->bind(CategoryServiceInterface::class, CategoryService::class);
     }
 
     /**

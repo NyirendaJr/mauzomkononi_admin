@@ -45,9 +45,7 @@ class InventoryController extends ModuleController
         ]);
     }
 
-    /**
-     * Display brands management
-     */
+
     public function brands(Request $request): Response
     {
         $this->permissionHelper->checkPermission('brand_view');
@@ -57,9 +55,16 @@ class InventoryController extends ModuleController
         ]);
     }
 
-    /**
-     * Display products management
-     */
+    public function categories(Request $request): Response
+    {
+        $this->permissionHelper->checkPermission('category_view');
+
+        return Inertia::render('modules/inventory/categories/index', [
+            'module' => $this->getModuleData(),
+        ]);
+    }
+
+
     public function products(Request $request): Response
     {
         $user = Auth::user();
