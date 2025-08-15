@@ -27,6 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('modules/inventory')->name('modules.inventory.')->group(function () {
         Route::get('/', [App\Http\Controllers\Modules\Inventory\InventoryController::class, 'index'])->name('index');
         Route::get('/brands', [App\Http\Controllers\Modules\Inventory\InventoryController::class, 'brands'])->name('brands');
+        Route::get('/categories', [App\Http\Controllers\Modules\Inventory\InventoryController::class, 'categories'])->name('categories');
         Route::get('/products', [App\Http\Controllers\Modules\Inventory\InventoryController::class, 'products'])->name('products');
         Route::get('/suppliers', [App\Http\Controllers\Modules\Inventory\InventoryController::class, 'suppliers'])->name('suppliers');
         Route::get('/customers', [App\Http\Controllers\Modules\Inventory\InventoryController::class, 'customers'])->name('customers');

@@ -19,6 +19,10 @@ class Category extends Model
         'warehouse_id'
     ];
 
+    public array $searchable = [
+        'name',
+    ];
+
     public function products()
     {
         return $this->hasMany(Product::class);
